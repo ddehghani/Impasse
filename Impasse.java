@@ -1,3 +1,5 @@
+import javax.lang.model.util.ElementScanner14;
+
 public class Impasse {
     public static void main(String[] args) {
         // argument validation
@@ -67,10 +69,13 @@ public class Impasse {
         // initial game state displayed
         StdOut.println("The dimension of your board is: " + m + "x" + m); 
         StdOut.println("The length of a blockade is: " + k);
-        displayBoard(gameBoard);
 
+        int moveCount = 0;
         // main loop
-        while (!isGameOver(gameBoard)) {
+        while (!isGameOver(gameBoard, k, moveCount)) {
+
+            displayBoard(gameBoard);
+
             int move = -1, row = -1, column = -1, color = -1;
             
             // read the move
@@ -83,8 +88,10 @@ public class Impasse {
                 if (move < 0 || move > 2)
                     move = -1;
             
-                if (move == 2)
+                if (move == 2) {
+                    terminateGracefully("User terminated game", moveCount, gameBoard);
                     return;
+                }
 
                 // read row and column
                 StdOut.print("Row Number: ");
@@ -139,21 +146,83 @@ public class Impasse {
                     isInputValid = false;
                 }
             } while (!isInputValid);
-    }
-}
 
-    // public static void logInvalidMove
-    
-    public static boolean isGameOver(char[][] gameBoard) {
-        return false;
+            // apply the move
+            moveCount++;
+            if (move == 0) {
+                for (int i = column; i < m; i++)
+                    gameBoard[row][i] = closed;
+                gameBoard[row][column] = open;
+            }
+
+            if (move == 1) {
+                gameBoard[row][column] = getColor(color);
+                if (column != m - 1)
+                    gameBoard[row][column + 1] = open;
+            }
+
+        }
+    }
+
+    public static void terminateGracefully(String terminationReason, int moveCount, char[][] gameBoard) {
+        displayBoard(gameBoard);
+        
+        StdOut.println("Termination: " + terminationReason + "!");
+        int totalSquares = gameBoard.length * gameBoard.length, counter = 0;
+        for (int row = 0; row < gameBoard.length; row++)
+         for (int col = 0; col < gameBoard[0].length; col++)
+            if (gameBoard[row][col] != '.' && gameBoard[row][col] != '*')
+                counter++;
+        StdOut.println("Score: " + (counter * 100) / totalSquares + "%");
+        StdOut.println("Moves: " + moveCount);
+        StdOut.println("Game ended!");
+    }
+
+    public static char getColor(int color) {
+        char[] colors = { 'R', 'G' , 'B'};
+        return colors[color];
+    }
+
+    public static boolean isGameOver(char[][] gameBoard, int k, int moveCount) {
+        // check for blockade
+        for (int col = 0; col < gameBoard[0].length; col++) {
+            char tempColor = '-';
+            int row = 0, numberOfConsecutive = 0;
+            while (true) {
+                if (row > gameBoard.length || gameBoard[row][col] == '.' || gameBoard[row][col] == '*')
+                    break;
+                if (tempColor == '-' || tempColor != gameBoard[row][col]) {
+                    tempColor = gameBoard[row][col];
+                    numberOfConsecutive = 1;
+                } else if (gameBoard[row][col] == tempColor) {
+                    numberOfConsecutive++;
+                }
+                row++;
+                if (numberOfConsecutive >= k) {
+                    terminateGracefully("Blockade", moveCount, gameBoard);
+                    return true;
+                }
+            }
+        }
+
+        //check if You have won!
+        for (int row = 0; row < gameBoard.length; row++)
+            for (int col = 0; col < gameBoard[0].length; col++)
+                if (gameBoard[row][col] == '.' || gameBoard[row][col] == '*')
+                    return false;
+        
+        terminateGracefully("You have won", moveCount, gameBoard);
+        return true;
     }
 
     public static void displayBoard(char[][] gameBoard) {
+        StdOut.println();
         for (int row = 0; row < gameBoard.length; row++) {
             for (int col = 0; col < gameBoard[0].length; col++)
                 StdOut.print(gameBoard[row][col]);
             StdOut.println();
         }
+        StdOut.println();
     }
 
     public static int calculateM(int n) {
